@@ -1,36 +1,133 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ActionID Authentication App
+
+A secure authentication web application with biometric enrollment built with Next.js, React, and TypeScript.
+
+## Overview
+
+This application implements user authentication flows including:
+- User registration with email and password
+- Biometric enrollment (UI ready for SDK integration)
+- User login with biometric verification
+- Protected home page (only accessible after login)
+
+## Tech Stack
+
+- **Client**: React (Next.js App Router)
+- **Server**: Node.js (Next.js API Routes)
+- **Styling**: Tailwind CSS
+- **Validation**: React Hook Form + Zod
+- **Type Safety**: TypeScript
+
+## Project Structure
+
+```
+actionid-app/
+├── app/                    # Next.js App Router
+│   ├── (auth)/            # Auth route group
+│   │   ├── login/         # Login page
+│   │   ├── register/      # Registration page
+│   │   └── enroll/        # Biometric enrollment page
+│   ├── home/              # Protected dashboard
+│   ├── api/               # API routes
+│   │   └── auth/          # Authentication endpoints
+│   └── layout.tsx         # Root layout with AuthProvider
+├── components/
+│   ├── ui/                # Reusable UI components
+│   ├── forms/             # Form components
+│   └── BiometricCapture/  # Biometric capture component
+├── context/
+│   └── AuthContext.tsx    # Authentication state management
+├── lib/
+│   ├── auth.ts            # Auth utilities
+│   └── utils.ts           # Helper functions
+└── types/
+    └── auth.ts            # TypeScript types
+```
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 18+ 
+- npm or yarn
+
+### Installation
+
+1. Install dependencies:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Run the development server:
+```bash
+npm run dev
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Pages
 
-## Learn More
+- `/` - Landing page (redirects to login or home)
+- `/login` - Login form with email/password
+- `/register` - Registration form
+- `/enroll` - Biometric enrollment page
+- `/home` - Protected dashboard (requires authentication)
 
-To learn more about Next.js, take a look at the following resources:
+## API Endpoints
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `POST /api/auth/login` - User login
+- `POST /api/auth/register` - User registration
+- `POST /api/auth/enroll` - Biometric enrollment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Current Implementation Status
 
-## Deploy on Vercel
+### Phase 1: Frontend (✅ Complete)
+- All pages and UI components implemented
+- Form validation with React Hook Form + Zod
+- Authentication state management with React Context
+- Mock API endpoints for development
+- Route protection and redirects
+- Responsive design with Tailwind CSS
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Phase 2: SDK Integration (⏳ Pending)
+- Integration with ActionID JavaScript SDK
+- Real biometric enrollment flow
+- Actual authentication with ActionID backend
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Architecture Decisions
+
+1. **Next.js App Router**: Modern routing with server components support
+2. **React Context API**: Simple state management for auth state
+3. **Mock Backend**: API routes with in-memory storage for development
+4. **Client-Side Auth**: Uses localStorage for session persistence (will be replaced with secure tokens in phase 2)
+5. **TypeScript**: Full type safety throughout the application
+
+## Development Notes
+
+- Mock user database is stored in memory (resets on server restart)
+- Test user: `test@example.com` / `password123`
+- Authentication state persists in localStorage
+- All forms include client-side validation
+
+## Next Steps (Phase 2)
+
+1. Install ActionID JavaScript SDK
+2. Integrate SDK into BiometricCapture component
+3. Update API routes to use ActionID SDK
+4. Replace mock authentication with real SDK calls
+5. Add proper error handling for SDK-specific errors
+
+## Credentials (for Phase 2)
+
+```
+Client ID (cid):   ivengprod
+Base URL:          https://aa-api.a2.ironvest.com
+API Key:           5000d0dc-9729-4273-b286-01ebb5a8fd7f
+API URL:           https://aa-api.a2.ironvest.com
+```
+
+## Resources
+
+- [ActionID Developer Docs](https://actionid-dev-portal.lovable.app)
+- [Frontend Integration Guide](https://actionid-dev-portal.lovable.app/docs/frontend-integration)
+- [SDK Reference](https://actionid-dev-portal.lovable.app/docs/sdk-reference)
