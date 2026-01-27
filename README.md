@@ -88,6 +88,7 @@ npm run dev
 - Mock API endpoints for development
 - Route protection and redirects
 - Responsive design with Tailwind CSS
+- Multi-step registration with biometric enrollment required
 
 ### Phase 2: SDK Integration (⏳ Pending)
 - Integration with ActionID JavaScript SDK
@@ -108,6 +109,7 @@ npm run dev
 - Test user: `test@example.com` / `password123`
 - Authentication state persists in localStorage
 - All forms include client-side validation
+- **Registration requires successful biometric enrollment before account creation**
 
 ## Next Steps (Phase 2)
 
