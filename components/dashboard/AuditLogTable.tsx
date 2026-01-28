@@ -65,15 +65,9 @@ function ScoreBadge({ score }: { score: number | null | undefined }) {
     return <span className="text-slate-400">—</span>;
   }
 
-  const getScoreColor = (s: number) => {
-    if (s >= 80) return 'from-green-500 to-emerald-500 text-white';
-    if (s >= 60) return 'from-amber-400 to-orange-400 text-white';
-    return 'from-red-400 to-rose-400 text-white';
-  };
-
   return (
     <span
-      className={`inline-flex items-center justify-center w-10 h-10 rounded-xl text-sm font-bold bg-gradient-to-br shadow-lg ${getScoreColor(score)}`}
+      className="inline-flex items-center justify-center w-10 h-10 rounded-xl text-sm font-bold bg-gradient-to-br from-slate-600 to-slate-700 text-white shadow-lg"
     >
       {score}
     </span>

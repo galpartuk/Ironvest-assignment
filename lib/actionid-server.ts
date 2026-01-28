@@ -11,13 +11,16 @@ export interface ActionIDValidateResponse {
   indicators?: Record<string, unknown>;
 }
 
-function env(name: string): string {
-  const v = process.env[name];
-  if (!v) {
-    // Fail fast on misconfiguration; avoid logging sensitive values.
-    throw new Error(`Missing env var: ${name}`);
+// Hardcoded ActionID configuration
+const ACTIONID_API_URL = 'https://aa-api.a2.ironvest.com';
+const ACTIONID_CID = 'ivengprod';
+
+function getApiKey(): string {
+  const apiKey = process.env.ACTIONID_API_KEY;
+  if (!apiKey) {
+    throw new Error('Missing env var: ACTIONID_API_KEY');
   }
-  return v;
+  return apiKey;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -32,9 +35,9 @@ function sleep(ms: number): Promise<void> {
 export async function validateActionIDSession(
   req: ActionIDValidateRequest
 ): Promise<ActionIDValidateResponse> {
-  const apiUrl = env('ACTIONID_API_URL').replace(/\/$/, '');
-  const cid = env('ACTIONID_CID');
-  const apiKey = env('ACTIONID_API_KEY');
+  const apiUrl = ACTIONID_API_URL;
+  const cid = ACTIONID_CID;
+  const apiKey = getApiKey();
 
   // Best practice: implement retry with exponential backoff for transient failures
   // (network issues, 5xx responses, etc.).

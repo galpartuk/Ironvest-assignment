@@ -19,20 +19,15 @@ npm install
 
 ### 1.3 Environment configuration
 
-Create a `.env.local` file in the project root with your ActionID credentials:
+Create a `.env.local` file in the project root with your ActionID API key:
 
 ```bash
-ACTIONID_API_URL=https://aa-api.a2.ironvest.com      # Backend validate URL base
-ACTIONID_API_KEY=...                                 # Your ActionID API key
-ACTIONID_CID=...                                     # Your ActionID client ID
-
-NEXT_PUBLIC_ACTIONID_BASE_URL=https://aa-api.a2.ironvest.com  # Frontend SDK base URL
-NEXT_PUBLIC_ACTIONID_CID=...                                  # Same client ID, public
+ACTIONID_API_KEY=your-api-key-here
 ```
 
 Notes:
-- Backend variables (`ACTIONID_*`) are **server-only** and never exposed to the client.
-- Frontend variables (`NEXT_PUBLIC_*`) are safe for the browser and used by the SDK.
+- The API key is the only required environment variable and is **server-only** (never exposed to the client).
+- All other ActionID configuration (API URL, Client ID) is hardcoded in the application for the production environment.
 
 ### 1.4 SDK script
 
@@ -88,7 +83,7 @@ hooks/
   useActionID.ts     # Thin wrapper around ActionID SDK lifecycle
 
 lib/
-  actionid-config.ts # Frontend SDK config (NEXT_PUBLIC_*)
+  actionid-config.ts # Frontend SDK config (hardcoded)
   actionid-server.ts # Backend /v1/validate client
   actionid-errors.ts # Maps ActionID indicators → user-friendly messages
   db.ts              # SQLite wrapper for user storage
@@ -162,10 +157,10 @@ Key responsibilities:
 - Builds a request to:
 
   ```text
-  POST {ACTIONID_API_URL}/v1/validate
-  Headers: { "Content-Type": "application/json", "apikey": ACTIONID_API_KEY }
+  POST https://aa-api.a2.ironvest.com/v1/validate
+  Headers: { "Content-Type": "application/json", "apikey": <from ACTIONID_API_KEY env var> }
   Body: {
-    cid: ACTIONID_CID,
+    cid: "ivengprod",
     csid,
     uid,
     action,      # e.g. "login", "user_enrollment"
