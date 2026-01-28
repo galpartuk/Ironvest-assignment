@@ -11,12 +11,12 @@ interface CardProps {
 export const Card: React.FC<CardProps> = ({ children, className, title, subtitle }) => {
   return (
     <div className={cn(
-      'bg-white rounded-lg border border-slate-200 p-6 w-full max-w-md',
+      'bg-white/95 backdrop-blur-sm rounded-2xl border border-slate-200/80 shadow-md p-8 w-full',
       className
     )}>
       {title && (
-        <div className="mb-4">
-          <h2 className="text-xl font-bold text-slate-900 mb-1">{title}</h2>
+        <div className="mb-5">
+          <h2 className="text-xl font-semibold tracking-tight text-slate-900 mb-1">{title}</h2>
           {subtitle && (
             <p className="text-sm text-slate-600">{subtitle}</p>
           )}

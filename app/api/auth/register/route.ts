@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AuthResponse } from '@/types/auth';
 import { validateActionIDSession } from '@/lib/actionid-server';
 import { getActionIDFriendlyError } from '@/lib/actionid-errors';
+import { createUserRecord, findUserById } from '@/lib/db';
+import { signAuthToken, getAuthCookieName } from '@/lib/jwt';
 
 // Register endpoint: creates a new user only after biometric capture (Step 2).
 // Flow: form (Step 1) → biometric capture → POST here with biometricEnrolled + csid → user created.
@@ -27,6 +29,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if the user already exists before we trigger a biometric enrollment.
+    const existing = await findUserById(email);
+    if (existing) {
+      return NextResponse.json<AuthResponse>(
+        { success: false, error: 'A user with this email is already enrolled.' },
+        { status: 409 }
+      );
+    }
+
     try {
       const validation = await validateActionIDSession({
         csid,
@@ -35,8 +46,15 @@ export async function POST(request: NextRequest) {
         action: 'user_enrollment',
         enrollment: true,
       });
+
+      // Always log the full validation payload for observability.
+      console.log('ActionID registration validation result', {
+        email,
+        validation,
+      });
+
       if (!validation.verifiedAction) {
-        // Log full validation payload for observability/debugging.
+        // Highlight failed validations separately.
         console.warn('ActionID registration validation failed', {
           email,
           validation,
@@ -55,15 +73,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For now we don't persist a DB; we just return the validated user.
-    return NextResponse.json<AuthResponse>({
+    // Persist the enrolled user to the database.
+    const record = await createUserRecord(email);
+
+    const token = signAuthToken(email);
+    const response = NextResponse.json<AuthResponse>({
       success: true,
       user: {
         id: email,
         email,
         isEnrolled: true,
+        createdAt: record.created_at,
       },
     });
+
+    response.cookies.set(getAuthCookieName(), token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60, // 1 hour
+    });
+
+    return response;
   } catch (error: any) {
     console.error('Register error', error);
     return NextResponse.json<AuthResponse>(

@@ -2,6 +2,7 @@ export interface User {
   id: string;
   email: string;
   isEnrolled: boolean;
+  createdAt?: string;
 }
 
 export interface AuthState {

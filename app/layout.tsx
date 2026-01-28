@@ -27,7 +27,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[radial-gradient(circle_at_top,_#e0f2fe,_#f9fafb_40%,_#ffffff_80%)] text-slate-900`}
       >
         <Script src="/ironvest.js" strategy="beforeInteractive" />
         <AuthProvider>

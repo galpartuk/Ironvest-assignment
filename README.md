@@ -57,9 +57,11 @@ Then open `http://localhost:3000` in your browser.
 - **UI**: Lightweight custom components + Tailwind CSS (v4, via `app/globals.css`)
 - **Forms & validation**: `react-hook-form` + Zod
 - **Auth state**: React Context (`AuthContext`) + `localStorage` persistence
+  - On initial load, we call `/api/auth/me` (JWT + DB) and use `localStorage` only as a UI cache.
 - **Biometrics**:
   - Frontend ActionID SDK (`window.Ironvest`) for capture
   - Backend `/v1/validate` integration for session validation
+  - Authentication session maintained via a signed JWT in an HTTP-only cookie
 
 ### 2.2 Project structure (simplified)
 
@@ -68,12 +70,11 @@ app/
   (auth)/
     login/      # Email-only login, redirects to /enroll?flow=login
     register/   # Email-only registration, redirects to /enroll?flow=register
-    enroll/     # Biometric capture for register/login and logged-in enrollment
+    enroll/     # Biometric capture for register/login flows
   home/         # Protected home page
   api/auth/
-    login/      # POST /api/auth/login    → ActionID validate
-    register/   # POST /api/auth/register → ActionID validate + "create" user
-    enroll/     # POST /api/auth/enroll   → ActionID validate for existing user
+    login/      # POST /api/auth/login    → ActionID validate + DB lookup
+    register/   # POST /api/auth/register → ActionID validate + create DB user
 
 components/
   ui/           # Button, Card, Input, ErrorMessage, etc.
@@ -90,6 +91,7 @@ lib/
   actionid-config.ts # Frontend SDK config (NEXT_PUBLIC_*)
   actionid-server.ts # Backend /v1/validate client
   actionid-errors.ts # Maps ActionID indicators → user-friendly messages
+  db.ts              # SQLite wrapper for user storage
   auth.ts            # Local/session storage helpers
 
 types/
@@ -107,19 +109,25 @@ types/
   - `/register` collects **email only**.
   - On submit, the email is stored in `sessionStorage` as "pending registration" and the user is redirected to `/enroll?flow=register`.
   - `/enroll?flow=register` loads `ActionIDFlowCapture`:
-  - Initializes the ActionID SDK with `uid = email` and a new `csid`.
-  - Starts biometric capture in the `BiometricCapture` container.
-  - After ~8 seconds (or when the capture completes), calls backend `POST /api/auth/register` with `{ email, csid }`.
-  - Backend calls ActionID `/v1/validate` with `action: "user_enrollment"` and, on success, returns a `User` model used to update `AuthContext` and redirect to `/home`.
+    - Initializes the ActionID SDK with `uid = email` and a new `csid`.
+    - Starts biometric capture in the `BiometricCapture` container (auto-started on page load).
+    - After ~8 seconds (or when the capture completes), calls backend `POST /api/auth/register` with `{ email, csid }`.
+  - The register API:
+    - First checks the SQLite database to ensure this `email` is not already enrolled.
+    - Calls ActionID `/v1/validate` with `action: "user_enrollment"`.
+    - On success, stores the user `{ id: email, created_at }` in the `users` table and returns a `User`
+      (including `createdAt`) used to update `AuthContext` and redirect to `/home`.
 
 - **Login**
   - `/login` also collects **email only**.
   - On submit, email is stored as "pending login" and the user is redirected to `/enroll?flow=login`.
-  - `/enroll?flow=login` uses `ActionIDFlowCapture` with `action: "login"` and on successful validation updates `AuthContext` and redirects to `/home`.
-
-- **Existing user biometric enrollment**
-  - `/enroll` (no `flow` query) is for logged‑in users.
-  - Uses `EnrollForm` + `useActionID` to enroll biometrics for the current `user.email`.
+  - `/enroll?flow=login` uses `ActionIDFlowCapture` with `action: "login"` and, after capture,
+    calls the login API which:
+    - Validates the session with ActionID (`action: "login"`, `enrollment: false` so the user must already exist).
+    - Looks up the user by email in the SQLite database.
+    - If the user is missing, returns an error ("User does not exist. Please register first.").
+    - If the user exists, returns a `User` (including `createdAt`) and updates `AuthContext`
+      before redirecting to `/home`.
 
 ### 3.2 SDK integration (`useActionID` hook)
 
@@ -132,8 +140,10 @@ Key responsibilities:
 
 - **Biometric session**
   - `startBiometric(containerId, actionID?)` starts `startBiometricSession` with:
-    - `size: "fill"`, `opacity: 1`, `useVirtualAvatar: false`, `frequency: 2000`.
+  - `size: "fill"`, `opacity: 1`, `useVirtualAvatar: false`, `frequency: 2000`.
   - Throws a clear error if the instance is not initialized ("Camera is not ready yet. Please try again.").
+  - The capture step is auto-started when the biometric page mounts and a `uid` is available,
+    without requiring the user to click a "Start" button first.
 
 - **Camera permission handling**
   - `ensureCameraPermission()`:

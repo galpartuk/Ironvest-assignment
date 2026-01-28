@@ -19,6 +19,7 @@ export const ActionIDFlowCapture: React.FC<{ flow: Flow }> = ({ flow }) => {
   const [isCapturing, setIsCapturing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const timerRef = useRef<number | null>(null);
+  const autoStartRef = useRef(false);
 
   const pendingRegister = flow === 'register' ? getPendingRegister() : null;
   const pendingLogin = flow === 'login' ? getPendingLogin() : null;
@@ -118,20 +119,35 @@ export const ActionIDFlowCapture: React.FC<{ flow: Flow }> = ({ flow }) => {
     });
   };
 
+  // Automatically start capture once when the component mounts and we have a UID.
+  useEffect(() => {
+    if (!autoStartRef.current && uid) {
+      autoStartRef.current = true;
+      void start();
+    }
+  }, [uid, start]);
+
   return (
     <div className="space-y-6">
       {error && <ErrorMessage message={error} />}
 
       <BiometricCapture isCapturing={isCapturing} containerId={cameraContainerId} />
 
-      {!isCapturing ? (
-        <Button onClick={start} variant="primary" isLoading={isSubmitting} className="w-full">
-          Start capture
-        </Button>
-      ) : (
+      {isCapturing ? (
         <Button onClick={handleCancel} variant="outline" className="w-full">
           Cancel
         </Button>
+      ) : (
+        <div className="space-y-3">
+          {error && (
+            <Button onClick={start} variant="primary" isLoading={isSubmitting} className="w-full">
+              Try capture again
+            </Button>
+          )}
+          <Button onClick={handleCancel} variant="outline" className="w-full">
+            Back
+          </Button>
+        </div>
       )}
     </div>
   );

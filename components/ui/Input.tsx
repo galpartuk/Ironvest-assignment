@@ -22,18 +22,18 @@ export const Input: React.FC<InputProps> = ({
           {label}
         </label>
       )}
-      <input
-        id={inputId}
-        className={cn(
-          'w-full px-4 py-2 border rounded-lg',
-          'focus:outline-none focus:border-blue-500',
-          error 
-            ? 'border-red-500' 
-            : 'border-slate-300',
-          className
-        )}
-        {...props}
-      />
+      <div className="relative">
+        <input
+          id={inputId}
+          className={cn(
+            'w-full px-4 py-2 border rounded-lg text-sm bg-white shadow-sm',
+            'focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100',
+            error ? 'border-red-500' : 'border-slate-300',
+            className
+          )}
+          {...props}
+        />
+      </div>
       {error && (
         <p className="mt-1 text-sm text-red-600">{error}</p>
       )}

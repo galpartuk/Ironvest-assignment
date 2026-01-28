@@ -15,7 +15,6 @@ interface AuthContextType {
   /** Login with biometric (ActionID validate). */
   loginWithBiometric: (params: { email: string; csid: string }) => Promise<AuthResponse>;
   logout: () => void;
-  enroll: (options?: { csid?: string }) => Promise<AuthResponse>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,10 +36,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Load user from localStorage on mount
-    const storedUser = getStoredUser();
-    setUser(storedUser);
-    setIsLoading(false);
+    // Load user from a trusted server source on mount, with localStorage as a fallback cache.
+    const bootstrap = async () => {
+      try {
+        const res = await fetch('/api/auth/me', { method: 'GET' });
+        if (res.ok) {
+          const data: AuthResponse = await res.json();
+          if (data.success && data.user) {
+            setUser(data.user);
+            setStoredUser(data.user);
+            setIsLoading(false);
+            return;
+          }
+        }
+      } catch {
+        // Ignore and fall back to local storage.
+      }
+
+      const storedUser = getStoredUser();
+      setUser(storedUser);
+      setIsLoading(false);
+    };
+
+    void bootstrap();
   }, []);
 
   const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
@@ -138,33 +156,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const enroll = async (options?: { csid?: string }): Promise<AuthResponse> => {
-    try {
-      const response = await fetch('/api/auth/enroll', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid: user?.email, csid: options?.csid }),
-      });
-
-      const data: AuthResponse = await response.json();
-
-      if (data.success && data.user) {
-        setUser(data.user);
-        setStoredUser(data.user);
-      }
-
-      return data;
-    } catch (error) {
-      return {
-        success: false,
-        error: 'Network error. Please try again.',
-      };
-    }
-  };
-
   const logout = () => {
+    // Clear client state immediately; also clear the server-side token.
     setUser(null);
     setStoredUser(null);
+    void fetch('/api/auth/logout', { method: 'POST' });
   };
 
   return (
@@ -178,7 +174,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         registerWithBiometric,
         loginWithBiometric,
         logout,
-        enroll,
       }}
     >
       {children}

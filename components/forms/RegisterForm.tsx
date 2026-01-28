@@ -32,10 +32,28 @@ export const RegisterForm: React.FC = () => {
   const onSubmit = async (data: RegisterFormData) => {
     setError('');
     setIsLoading(true);
-    // Per ActionID flow, registration completes on /enroll after biometric validation.
-    setPendingRegister({ email: data.email });
-    router.push('/enroll?flow=register');
-    setIsLoading(false);
+    try {
+      // Check that the user does NOT already exist before starting biometric enrollment.
+      const res = await fetch('/api/auth/user-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: data.email, mode: 'register' }),
+      });
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        setError(json.error || 'Unable to start registration. Please try again.');
+        return;
+      }
+
+      // Per ActionID flow, registration completes on /enroll after biometric validation.
+      setPendingRegister({ email: data.email });
+      router.push('/enroll?flow=register');
+    } catch {
+      setError('Unable to check user status. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

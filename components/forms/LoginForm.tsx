@@ -32,10 +32,28 @@ export const LoginForm: React.FC = () => {
   const onSubmit = async (data: LoginFormData) => {
     setError('');
     setIsLoading(true);
-    // Per ActionID flow, login must go through biometric capture on /enroll
-    setPendingLogin({ email: data.email });
-    router.push('/enroll?flow=login');
-    setIsLoading(false);
+    try {
+      // Ensure the user already exists before starting biometric verification.
+      const res = await fetch('/api/auth/user-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: data.email, mode: 'login' }),
+      });
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        setError(json.error || 'Unable to start login. Please try again.');
+        return;
+      }
+
+      // Per ActionID flow, login must go through biometric capture on /enroll
+      setPendingLogin({ email: data.email });
+      router.push('/enroll?flow=login');
+    } catch {
+      setError('Unable to check user status. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
