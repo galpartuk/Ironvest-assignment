@@ -15,7 +15,7 @@ export function getActionIDFriendlyError(validation: ActionIDValidateResponse): 
   }
 
   if (indicators.iv_is_biometrics_match === false) {
-    return 'We could not match your face to this account. Please make sure you are using the correct email or re-enroll.';
+    return 'Biometric capture failed. Please check that you entered the correct email and try again.';
   }
 
   if (indicators.iv_liveness === false) {

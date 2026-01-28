@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AuthResponse } from '@/types/auth';
 import { validateActionIDSession } from '@/lib/actionid-server';
 import { getActionIDFriendlyError } from '@/lib/actionid-errors';
-import { findUserById } from '@/lib/db';
+import { findUserById, insertAuditLog } from '@/lib/db';
 import { signAuthToken, getAuthCookieName } from '@/lib/jwt';
 
 // No mock user storage: success is based on ActionID validation only.
@@ -33,6 +33,14 @@ export async function POST(request: NextRequest) {
         action: 'login',
         // For login we currently disable auto-enrollment and require an existing profile.
         enrollment: false,
+      });
+
+      await insertAuditLog({
+        userId: email,
+        action: 'login',
+        verifiedAction: !!validation.verifiedAction,
+        ivScore: validation.ivScore,
+        indicators: validation.indicators,
       });
 
       // Always log the validation result for observability.

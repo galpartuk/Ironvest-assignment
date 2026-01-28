@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AuthResponse } from '@/types/auth';
 import { validateActionIDSession } from '@/lib/actionid-server';
 import { getActionIDFriendlyError } from '@/lib/actionid-errors';
-import { createUserRecord, findUserById } from '@/lib/db';
+import { createUserRecord, findUserById, insertAuditLog } from '@/lib/db';
 import { signAuthToken, getAuthCookieName } from '@/lib/jwt';
 
 // Register endpoint: creates a new user only after biometric capture (Step 2).
@@ -45,6 +45,15 @@ export async function POST(request: NextRequest) {
         // For registration we use the recommended enrollment action name.
         action: 'user_enrollment',
         enrollment: true,
+      });
+
+      // Persist an audit entry for this ActionID call.
+      await insertAuditLog({
+        userId: email,
+        action: 'register',
+        verifiedAction: !!validation.verifiedAction,
+        ivScore: validation.ivScore,
+        indicators: validation.indicators,
       });
 
       // Always log the full validation payload for observability.
