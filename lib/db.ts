@@ -53,8 +53,8 @@ function getDatabase(): Database.Database {
 export async function findUserById(id: string): Promise<DbUser | undefined> {
   const database = getDatabase();
   const row = database
-    .prepare<DbUser['id'], DbUser>('SELECT id, created_at FROM users WHERE id = ?')
-    .get(id);
+    .prepare('SELECT id, created_at FROM users WHERE id = ?')
+    .get(id) as DbUser | undefined;
   return row ?? undefined;
 }
 
@@ -103,10 +103,9 @@ export interface UserAuditEntry {
 export async function getRecentAuditLogsForUser(userId: string, limit = 20): Promise<UserAuditEntry[]> {
   const database = getDatabase();
   const rows = database
-    .prepare<DbAuditLog['user_id'], DbAuditLog[]>(
+    .prepare(
       'SELECT id, user_id, action, created_at, verified_action, iv_score, indicators FROM audit_logs WHERE user_id = ? ORDER BY created_at DESC LIMIT ?'
     )
-    // better-sqlite3 doesn't support typed overload for multiple params, so keep this generic.
     .all(userId, limit) as DbAuditLog[];
 
   return rows.map((row) => {

@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { BiometricCapture } from '@/components/BiometricCapture/BiometricCapture';
-import { useActionID } from '../../hooks/useActionID';
+import { CameraPermissionPrompt } from '@/components/BiometricCapture/CameraPermissionPrompt';
+import { useActionID, CameraPermissionStatus } from '../../hooks/useActionID';
 import { useAuth } from '@/context/AuthContext';
 import { getPendingLogin, getPendingRegister, setPendingLogin, setPendingRegister } from '@/lib/auth';
 
@@ -14,10 +15,12 @@ type Flow = 'register' | 'login';
 export const ActionIDFlowCapture: React.FC<{ flow: Flow }> = ({ flow }) => {
   const router = useRouter();
   const { registerWithBiometric, loginWithBiometric } = useAuth();
-  const { initialize, startBiometric, stop, getCsid, ensureCameraPermission, cameraContainerId } = useActionID();
+  const { initialize, startBiometric, stop, getCsid, ensureCameraPermission, getPermissionStatus, cameraContainerId } = useActionID();
   const [error, setError] = useState('');
   const [isCapturing, setIsCapturing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [permissionStatus, setPermissionStatus] = useState<CameraPermissionStatus | null>(null);
+  const [isCheckingPermission, setIsCheckingPermission] = useState(false);
   const timerRef = useRef<number | null>(null);
   const autoStartRef = useRef(false);
 
@@ -78,29 +81,60 @@ export const ActionIDFlowCapture: React.FC<{ flow: Flow }> = ({ flow }) => {
     router.push(flow === 'register' ? '/register' : '/login');
   };
 
-  const start = async () => {
+  /**
+   * Check camera permission status using the SDK's getPermissionsStatus().
+   * If granted, proceed with capture. Otherwise, show the permission prompt.
+   */
+  const checkAndStartCapture = async () => {
     setError('');
+    setIsCheckingPermission(true);
+
+    if (!uid) {
+      setError(`Missing ${flow} data. Please start from /${flow === 'register' ? 'register' : 'login'}.`);
+      setIsCheckingPermission(false);
+      return;
+    }
+
+    // Initialize SDK first so we can use getPermissionsStatus
+    try {
+      initialize(uid);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to initialize SDK');
+      setIsCheckingPermission(false);
+      return;
+    }
+
+    // Check permission status using SDK
+    const status = await getPermissionStatus();
+    setPermissionStatus(status);
+    setIsCheckingPermission(false);
+
+    if (status === 'granted') {
+      // Permission already granted, proceed with capture
+      startCaptureFlow();
+    }
+    // If not granted, the CameraPermissionPrompt will be shown
+  };
+
+  /**
+   * Actually starts the biometric capture (called after permission is confirmed).
+   */
+  const startCaptureFlow = async () => {
+    setError('');
+
     if (!uid) {
       setError(`Missing ${flow} data. Please start from /${flow === 'register' ? 'register' : 'login'}.`);
       return;
     }
 
-    // Check camera permission before we attempt to start the SDK.
+    // If we need to request permission (prompt or retry after denied)
     try {
       await ensureCameraPermission();
+      setPermissionStatus('granted');
     } catch (e) {
-      const message =
-        e instanceof Error
-          ? e.message
-          : 'Unable to access the camera. Please check your device permissions and try again.';
-
-      // Redirect to a dedicated error page so we don't render the camera container
-      // when permissions are denied.
-      const search = new URLSearchParams({
-        flow,
-        reason: message,
-      }).toString();
-      router.push(`/camera-error?${search}`);
+      // If permission was denied after prompt, update status
+      const status = await getPermissionStatus();
+      setPermissionStatus(status);
       return;
     }
 
@@ -110,6 +144,8 @@ export const ActionIDFlowCapture: React.FC<{ flow: Flow }> = ({ flow }) => {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         try {
+          // Re-initialize if needed (in case SDK was cleaned up)
+          if (!uid) return;
           initialize(uid);
           startBiometric(cameraContainerId, flow);
 
@@ -126,13 +162,46 @@ export const ActionIDFlowCapture: React.FC<{ flow: Flow }> = ({ flow }) => {
     });
   };
 
-  // Automatically start capture once when the component mounts and we have a UID.
+  /**
+   * Handle retry from permission prompt - attempts to request permission again.
+   */
+  const handleRetryPermission = () => {
+    startCaptureFlow();
+  };
+
+  // Automatically check permission and start capture once when the component mounts and we have a UID.
   useEffect(() => {
     if (!autoStartRef.current && uid) {
       autoStartRef.current = true;
-      void start();
+      void checkAndStartCapture();
     }
-  }, [uid, start]);
+  }, [uid]);
+
+  // Show loading state while checking permission
+  if (isCheckingPermission) {
+    return (
+      <div className="space-y-6">
+        <div className="border-2 border-dashed border-slate-300 bg-slate-50 rounded-lg p-8">
+          <div className="flex flex-col items-center justify-center space-y-4">
+            <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+            <p className="text-sm text-slate-600">Checking camera access...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show permission prompt if camera is not granted
+  if (permissionStatus && permissionStatus !== 'granted' && !isCapturing) {
+    return (
+      <CameraPermissionPrompt
+        status={permissionStatus}
+        onRetry={handleRetryPermission}
+        onBack={handleCancel}
+        isLoading={isSubmitting}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -147,7 +216,7 @@ export const ActionIDFlowCapture: React.FC<{ flow: Flow }> = ({ flow }) => {
       ) : (
         <div className="space-y-3">
           {error && (
-            <Button onClick={start} variant="primary" isLoading={isSubmitting} className="w-full">
+            <Button onClick={startCaptureFlow} variant="primary" isLoading={isSubmitting} className="w-full">
               Try capture again
             </Button>
           )}

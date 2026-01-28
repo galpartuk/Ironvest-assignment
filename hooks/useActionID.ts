@@ -5,6 +5,8 @@ import { ACTIONID_CONFIG } from '@/lib/actionid-config';
 
 const CAMERA_CONTAINER_ID = 'actionid-camera-container';
 
+export type CameraPermissionStatus = 'granted' | 'denied' | 'prompt' | 'unknown';
+
 export function useActionID() {
   const instanceRef = useRef<any>(null);
   const csidRef = useRef('');
@@ -50,6 +52,32 @@ export function useActionID() {
     if (typeof instance.setUid === 'function') instance.setUid(uid);
     instanceRef.current = instance;
   }, [safeCleanup]);
+
+  /**
+   * Uses the SDK's getPermissionsStatus() to check camera permission state.
+   * Returns: 'granted' | 'denied' | 'prompt' | 'unknown'
+   */
+  const getPermissionStatus = useCallback(async (): Promise<CameraPermissionStatus> => {
+    if (!instanceRef.current) {
+      // If SDK is not initialized, fall back to browser permission API
+      if (typeof navigator !== 'undefined' && navigator.permissions) {
+        try {
+          const result = await navigator.permissions.query({ name: 'camera' as PermissionName });
+          return result.state as CameraPermissionStatus;
+        } catch {
+          return 'unknown';
+        }
+      }
+      return 'unknown';
+    }
+
+    try {
+      const status = await instanceRef.current.getPermissionsStatus();
+      return status?.camera || 'unknown';
+    } catch {
+      return 'unknown';
+    }
+  }, []);
 
   const startBiometric = useCallback(
     (containerId: string = CAMERA_CONTAINER_ID, actionID?: string) => {
@@ -110,8 +138,8 @@ export function useActionID() {
     startBiometric,
     stop,
     ensureCameraPermission,
+    getPermissionStatus,
     getCsid,
     cameraContainerId: CAMERA_CONTAINER_ID,
   };
 }
-

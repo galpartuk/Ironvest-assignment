@@ -2,29 +2,43 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'outline';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
+  size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
 }
 
 export const Button: React.FC<ButtonProps> = ({
   children,
   variant = 'primary',
+  size = 'md',
   isLoading = false,
   className,
   disabled,
   ...props
 }) => {
   const baseStyles =
-    'inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500';
+    'inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-500';
 
   const variants = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700',
-    outline: 'border border-slate-300 text-slate-700 bg-white hover:bg-slate-50',
+    primary:
+      'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 hover:from-indigo-500 hover:to-violet-500 active:scale-[0.98]',
+    secondary:
+      'bg-gradient-to-r from-slate-700 to-slate-800 text-white shadow-lg shadow-slate-500/20 hover:from-slate-600 hover:to-slate-700 active:scale-[0.98]',
+    outline:
+      'border-2 border-slate-200 text-slate-700 bg-white/80 backdrop-blur-sm hover:border-indigo-300 hover:bg-indigo-50/50 hover:text-indigo-700',
+    ghost:
+      'text-slate-600 hover:text-indigo-600 hover:bg-indigo-50',
+  };
+
+  const sizes = {
+    sm: 'px-3 py-1.5 text-xs',
+    md: 'px-5 py-2.5 text-sm',
+    lg: 'px-6 py-3 text-base',
   };
 
   return (
     <button
-      className={cn(baseStyles, variants[variant], className)}
+      className={cn(baseStyles, variants[variant], sizes[size], className)}
       disabled={disabled || isLoading}
       {...props}
     >

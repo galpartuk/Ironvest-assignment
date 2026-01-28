@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
 import { ActionIDFlowCapture } from '@/components/forms/ActionIDFlowCapture';
@@ -8,7 +8,25 @@ import { ActionIDFlowCapture } from '@/components/forms/ActionIDFlowCapture';
 function EnrollContent() {
   const router = useRouter();
   const params = useSearchParams();
-  const flow = (params.get('flow') || 'login') as 'register' | 'login';
+  const flowParam = params.get('flow');
+  const isValidFlow = flowParam === 'register' || flowParam === 'login';
+  const flow = (flowParam || 'login') as 'register' | 'login';
+
+  // If flow is invalid, redirect to login
+  useEffect(() => {
+    if (flowParam && !isValidFlow) {
+      router.push('/login');
+    }
+  }, [flowParam, isValidFlow, router]);
+
+  // Show loading while redirecting for invalid flow
+  if (flowParam && !isValidFlow) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50/60">
@@ -33,21 +51,18 @@ function EnrollContent() {
           <Card
             className="w-full max-w-2xl"
             title="Biometric enrollment"
-            subtitle="Step 2 of 2 · We’ll use your camera briefly to enroll your biometrics."
+            subtitle="Step 2 of 2 · We'll use your camera briefly to enroll your biometrics."
           >
             <ActionIDFlowCapture flow="register" />
           </Card>
-        ) : flow === 'login' ? (
+        ) : (
           <Card
             className="w-full max-w-2xl"
             title="Biometric verification"
-            subtitle="We’ll use your camera briefly to verify it’s really you."
+            subtitle="We'll use your camera briefly to verify it's really you."
           >
             <ActionIDFlowCapture flow="login" />
           </Card>
-        ) : (
-          // If flow is something unexpected, send the user back to login.
-          router.push('/login')
         )}
       </main>
     </div>
