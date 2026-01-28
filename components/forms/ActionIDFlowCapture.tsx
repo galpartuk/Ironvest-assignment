@@ -89,11 +89,18 @@ export const ActionIDFlowCapture: React.FC<{ flow: Flow }> = ({ flow }) => {
     try {
       await ensureCameraPermission();
     } catch (e) {
-      setError(
+      const message =
         e instanceof Error
           ? e.message
-          : 'Unable to access the camera. Please check your device permissions and try again.'
-      );
+          : 'Unable to access the camera. Please check your device permissions and try again.';
+
+      // Redirect to a dedicated error page so we don't render the camera container
+      // when permissions are denied.
+      const search = new URLSearchParams({
+        flow,
+        reason: message,
+      }).toString();
+      router.push(`/camera-error?${search}`);
       return;
     }
 
