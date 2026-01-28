@@ -2,37 +2,28 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline';
+  variant?: 'primary' | 'outline';
   isLoading?: boolean;
-  size?: 'sm' | 'md' | 'lg';
 }
 
 export const Button: React.FC<ButtonProps> = ({
   children,
   variant = 'primary',
   isLoading = false,
-  size = 'md',
   className,
   disabled,
   ...props
 }) => {
-  const baseStyles = 'font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2';
-  
-  const sizeStyles = {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2.5 text-base',
-    lg: 'px-6 py-3 text-lg',
-  };
+  const baseStyles = 'px-4 py-2 font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed';
   
   const variants = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md active:scale-95 focus:ring-blue-500 shadow-sm',
-    secondary: 'bg-slate-100 text-slate-900 hover:bg-slate-200 active:scale-95 focus:ring-slate-500',
-    outline: 'border-2 border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 active:scale-95 focus:ring-slate-500',
+    primary: 'bg-blue-600 text-white hover:bg-blue-700',
+    outline: 'border border-slate-300 text-slate-700 hover:bg-slate-50',
   };
 
   return (
     <button
-      className={cn(baseStyles, sizeStyles[size], variants[variant], className)}
+      className={cn(baseStyles, variants[variant], className)}
       disabled={disabled || isLoading}
       {...props}
     >

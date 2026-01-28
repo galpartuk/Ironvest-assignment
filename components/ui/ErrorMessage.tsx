@@ -22,7 +22,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
 
   return (
     <div className={cn(
-      'border rounded-lg px-4 py-3 animate-fadeIn',
+      'border rounded-lg px-4 py-3',
       styles[type],
       className
     )}>

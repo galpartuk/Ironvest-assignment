@@ -1,135 +1,204 @@
-# ActionID Authentication App
+## ActionID Biometric Authentication App
 
-A secure authentication web application with biometric enrollment built with Next.js, React, and TypeScript.
+A production-style Next.js application that implements email‑based authentication with biometric verification using the ActionID JavaScript SDK and backend `/v1/validate` API.
 
-## Overview
+---
 
-This application implements user authentication flows including:
-- User registration with email and password
-- Biometric enrollment (UI ready for SDK integration)
-- User login with biometric verification
-- Protected home page (only accessible after login)
+## 1. Setup & Run Instructions
 
-## Tech Stack
+### 1.1 Prerequisites
 
-- **Client**: React (Next.js App Router)
-- **Server**: Node.js (Next.js API Routes)
-- **Styling**: Tailwind CSS
-- **Validation**: React Hook Form + Zod
-- **Type Safety**: TypeScript
+- **Node.js** ≥ 18
+- **npm** (bundled with Node)
 
-## Project Structure
+### 1.2 Install dependencies
 
-```
-actionid-app/
-├── app/                    # Next.js App Router
-│   ├── (auth)/            # Auth route group
-│   │   ├── login/         # Login page
-│   │   ├── register/      # Registration page
-│   │   └── enroll/        # Biometric enrollment page
-│   ├── home/              # Protected dashboard
-│   ├── api/               # API routes
-│   │   └── auth/          # Authentication endpoints
-│   └── layout.tsx         # Root layout with AuthProvider
-├── components/
-│   ├── ui/                # Reusable UI components
-│   ├── forms/             # Form components
-│   └── BiometricCapture/  # Biometric capture component
-├── context/
-│   └── AuthContext.tsx    # Authentication state management
-├── lib/
-│   ├── auth.ts            # Auth utilities
-│   └── utils.ts           # Helper functions
-└── types/
-    └── auth.ts            # TypeScript types
-```
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+ 
-- npm or yarn
-
-### Installation
-
-1. Install dependencies:
 ```bash
 npm install
 ```
 
-2. Run the development server:
+### 1.3 Environment configuration
+
+Create a `.env.local` file in the project root with your ActionID credentials:
+
+```bash
+ACTIONID_API_URL=https://aa-api.a2.ironvest.com      # Backend validate URL base
+ACTIONID_API_KEY=...                                 # Your ActionID API key
+ACTIONID_CID=...                                     # Your ActionID client ID
+
+NEXT_PUBLIC_ACTIONID_BASE_URL=https://aa-api.a2.ironvest.com  # Frontend SDK base URL
+NEXT_PUBLIC_ACTIONID_CID=...                                  # Same client ID, public
+```
+
+Notes:
+- Backend variables (`ACTIONID_*`) are **server-only** and never exposed to the client.
+- Frontend variables (`NEXT_PUBLIC_*`) are safe for the browser and used by the SDK.
+
+### 1.4 SDK script
+
+The ActionID SDK (`ironvest.js`) is served from `public/` and loaded once in `app/layout.tsx` via `next/script`.  
+If you replace or update the SDK file, keep the same file name or adjust the script tag accordingly.
+
+### 1.5 Run the app
+
 ```bash
 npm run dev
 ```
 
-3. Open [http://localhost:3000](http://localhost:3000) in your browser
+Then open `http://localhost:3000` in your browser.
 
-## Pages
+---
 
-- `/` - Landing page (redirects to login or home)
-- `/login` - Login form with email/password
-- `/register` - Registration form
-- `/enroll` - Biometric enrollment page
-- `/home` - Protected dashboard (requires authentication)
+## 2. High‑Level Architecture
 
-## API Endpoints
+### 2.1 Tech stack
 
-- `POST /api/auth/login` - User login
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/enroll` - Biometric enrollment
+- **Framework**: Next.js App Router (TypeScript, React)
+- **UI**: Lightweight custom components + Tailwind CSS (v4, via `app/globals.css`)
+- **Forms & validation**: `react-hook-form` + Zod
+- **Auth state**: React Context (`AuthContext`) + `localStorage` persistence
+- **Biometrics**:
+  - Frontend ActionID SDK (`window.Ironvest`) for capture
+  - Backend `/v1/validate` integration for session validation
 
-## Current Implementation Status
+### 2.2 Project structure (simplified)
 
-### Phase 1: Frontend (✅ Complete)
-- All pages and UI components implemented
-- Form validation with React Hook Form + Zod
-- Authentication state management with React Context
-- Mock API endpoints for development
-- Route protection and redirects
-- Responsive design with Tailwind CSS
-- Multi-step registration with biometric enrollment required
+```text
+app/
+  (auth)/
+    login/      # Email-only login, redirects to /enroll?flow=login
+    register/   # Email-only registration, redirects to /enroll?flow=register
+    enroll/     # Biometric capture for register/login and logged-in enrollment
+  home/         # Protected home page
+  api/auth/
+    login/      # POST /api/auth/login    → ActionID validate
+    register/   # POST /api/auth/register → ActionID validate + "create" user
+    enroll/     # POST /api/auth/enroll   → ActionID validate for existing user
 
-### Phase 2: SDK Integration (⏳ Pending)
-- Integration with ActionID JavaScript SDK
-- Real biometric enrollment flow
-- Actual authentication with ActionID backend
+components/
+  ui/           # Button, Card, Input, ErrorMessage, etc.
+  forms/        # RegisterForm, LoginForm, EnrollForm, ActionIDFlowCapture
+  BiometricCapture/  # Camera container for SDK
 
-## Architecture Decisions
+context/
+  AuthContext.tsx    # AuthProvider + useAuth hook
 
-1. **Next.js App Router**: Modern routing with server components support
-2. **React Context API**: Simple state management for auth state
-3. **Mock Backend**: API routes with in-memory storage for development
-4. **Client-Side Auth**: Uses localStorage for session persistence (will be replaced with secure tokens in phase 2)
-5. **TypeScript**: Full type safety throughout the application
+hooks/
+  useActionID.ts     # Thin wrapper around ActionID SDK lifecycle
 
-## Development Notes
+lib/
+  actionid-config.ts # Frontend SDK config (NEXT_PUBLIC_*)
+  actionid-server.ts # Backend /v1/validate client
+  actionid-errors.ts # Maps ActionID indicators → user-friendly messages
+  auth.ts            # Local/session storage helpers
 
-- Mock user database is stored in memory (resets on server restart)
-- Test user: `test@example.com` / `password123`
-- Authentication state persists in localStorage
-- All forms include client-side validation
-- **Registration requires successful biometric enrollment before account creation**
-
-## Next Steps (Phase 2)
-
-1. Install ActionID JavaScript SDK
-2. Integrate SDK into BiometricCapture component
-3. Update API routes to use ActionID SDK
-4. Replace mock authentication with real SDK calls
-5. Add proper error handling for SDK-specific errors
-
-## Credentials (for Phase 2)
-
-```
-Client ID (cid):   ivengprod
-Base URL:          https://aa-api.a2.ironvest.com
-API Key:           5000d0dc-9729-4273-b286-01ebb5a8fd7f
-API URL:           https://aa-api.a2.ironvest.com
+types/
+  auth.ts            # Auth-related types
+  actionid.d.ts      # Global ActionID SDK typings (window.Ironvest)
 ```
 
-## Resources
+---
 
-- [ActionID Developer Docs](https://actionid-dev-portal.lovable.app)
-- [Frontend Integration Guide](https://actionid-dev-portal.lovable.app/docs/frontend-integration)
-- [SDK Reference](https://actionid-dev-portal.lovable.app/docs/sdk-reference)
+## 3. Flow Design & Architecture Decisions
+
+### 3.1 Registration & login flows
+
+- **Registration**
+  - `/register` collects **email only**.
+  - On submit, the email is stored in `sessionStorage` as "pending registration" and the user is redirected to `/enroll?flow=register`.
+  - `/enroll?flow=register` loads `ActionIDFlowCapture`:
+  - Initializes the ActionID SDK with `uid = email` and a new `csid`.
+  - Starts biometric capture in the `BiometricCapture` container.
+  - After ~8 seconds (or when the capture completes), calls backend `POST /api/auth/register` with `{ email, csid }`.
+  - Backend calls ActionID `/v1/validate` with `action: "user_enrollment"` and, on success, returns a `User` model used to update `AuthContext` and redirect to `/home`.
+
+- **Login**
+  - `/login` also collects **email only**.
+  - On submit, email is stored as "pending login" and the user is redirected to `/enroll?flow=login`.
+  - `/enroll?flow=login` uses `ActionIDFlowCapture` with `action: "login"` and on successful validation updates `AuthContext` and redirects to `/home`.
+
+- **Existing user biometric enrollment**
+  - `/enroll` (no `flow` query) is for logged‑in users.
+  - Uses `EnrollForm` + `useActionID` to enroll biometrics for the current `user.email`.
+
+### 3.2 SDK integration (`useActionID` hook)
+
+Key responsibilities:
+
+- **Initialization**
+  - Verifies `window.Ironvest` is present.
+  - Generates a new `csid` (`crypto.randomUUID()`), sets it on the SDK instance, and stores it for later backend validation.
+  - Applies configuration from `ACTIONID_CONFIG` (cid, baseURL, debug).
+
+- **Biometric session**
+  - `startBiometric(containerId, actionID?)` starts `startBiometricSession` with:
+    - `size: "fill"`, `opacity: 1`, `useVirtualAvatar: false`, `frequency: 2000`.
+  - Throws a clear error if the instance is not initialized ("Camera is not ready yet. Please try again.").
+
+- **Camera permission handling**
+  - `ensureCameraPermission()`:
+    - Calls `navigator.mediaDevices.getUserMedia({ video: true })` to trigger the browser permission dialog.
+    - Stops all tracks immediately; it is only used to check access.
+    - Translates common browser errors into user‑friendly messages:
+      - Permission denied, no devices, unsupported browser, generic failures.
+
+- **Cleanup**
+  - `stop()` calls `stopBiometric()` and `destroy()` defensively if available.
+  - `useEffect` cleanup ensures the SDK instance is always torn down when the component unmounts.
+
+### 3.3 Backend validation (`lib/actionid-server.ts`)
+
+- Provides `validateActionIDSession({ csid, uid, action, enrollment? })`.
+- Builds a request to:
+
+  ```text
+  POST {ACTIONID_API_URL}/v1/validate
+  Headers: { "Content-Type": "application/json", "apikey": ACTIONID_API_KEY }
+  Body: {
+    cid: ACTIONID_CID,
+    csid,
+    uid,
+    action,      # e.g. "login", "user_enrollment"
+    enrollment: true | false
+  }
+  ```
+
+- Parses responses defensively:
+  - Reads the raw body, attempts `JSON.parse`, and throws a clear error if the response is non‑JSON or not `2xx`.
+
+### 3.4 Error handling strategy
+
+- **Network / HTTP errors**
+  - API routes wrap calls with try/catch and return generic but clear messages such as:
+    - `"ActionID error: ..."` for server issues
+    - `"Network error. Please try again."` for fetch failures.
+
+- **Biometric validation failures**
+  - When ActionID returns `verifiedAction: false` but a valid `200` response, we:
+    - Inspect `validation.indicators` and pass them through `getActionIDFriendlyError`.
+    - Present specific messages (e.g., liveness, enrollment, or match issues) instead of “Biometric validation failed”.
+
+- **Camera permission**
+  - `ensureCameraPermission()` provides user‑friendly messages for denied or unavailable camera access.
+
+---
+
+## 4. Assumptions
+
+- **Email as primary identifier**
+  - The system treats email as the unique user identifier and uses it as `uid` for ActionID.
+  - No passwords are stored or validated in this implementation; authentication is **purely biometric** with ActionID.
+
+- **Best‑effort local persistence**
+  - User session is persisted to `localStorage` via `AuthContext` for convenience.
+  - This is acceptable for the current scope; a production deployment may replace this with secure HTTP‑only cookies or a proper token/session store.
+
+- **Simple in‑process “user store”**
+  - The backend currently assumes a lightweight, demo‑style persistence model (aligned with the repository scope) and focuses primarily on demonstrating the ActionID integration rather than full user lifecycle management.
+
+- **Single ActionID tenant**
+  - The app assumes a single set of ActionID credentials (one client ID / API key pair) defined at build time via environment variables.
+
+- **One active biometric session per browser tab**
+  - The SDK wrapper (`useActionID`) manages a single `csid` and instance per component lifecycle and does not attempt to coordinate multiple concurrent biometric sessions.
+

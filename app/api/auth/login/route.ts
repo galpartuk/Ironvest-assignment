@@ -1,44 +1,66 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AuthResponse, LoginCredentials } from '@/types/auth';
+import { AuthResponse } from '@/types/auth';
+import { validateActionIDSession } from '@/lib/actionid-server';
+import { getActionIDFriendlyError } from '@/lib/actionid-errors';
 
-// Mock user database (in real app, this would be a database)
-const mockUsers: Array<{ id: string; email: string; password: string; isEnrolled: boolean }> = [
-  { id: '1', email: 'test@example.com', password: 'password123', isEnrolled: false },
-];
+// No mock user storage: success is based on ActionID validation only.
 
 export async function POST(request: NextRequest) {
   try {
-    const body: LoginCredentials = await request.json();
-    const { email, password } = body;
+    const body: { email?: string; csid?: string } = await request.json();
+    const { email, csid } = body;
 
     // Validation
-    if (!email || !password) {
+    if (!email) {
       return NextResponse.json<AuthResponse>(
-        { success: false, error: 'Email and password are required' },
+        { success: false, error: 'Email is required' },
+        { status: 400 }
+      );
+    }
+    if (!csid) {
+      return NextResponse.json<AuthResponse>(
+        { success: false, error: 'Missing ActionID session (csid)' },
         { status: 400 }
       );
     }
 
-    // Find user
-    const user = mockUsers.find((u) => u.email === email && u.password === password);
-
-    if (!user) {
+    try {
+      const validation = await validateActionIDSession({
+        csid,
+        uid: email,
+        action: 'login',
+        enrollment: true,
+      });
+      if (!validation.verifiedAction) {
+        console.warn('ActionID login validation failed', {
+          email,
+          validation,
+        });
+        const message = getActionIDFriendlyError(validation);
+        return NextResponse.json<AuthResponse>(
+          { success: false, error: message },
+          { status: 401 }
+        );
+      }
+    } catch (err: any) {
+      console.error('ActionID validate (login) failed', err);
       return NextResponse.json<AuthResponse>(
-        { success: false, error: 'Invalid email or password' },
-        { status: 401 }
+        { success: false, error: `ActionID error: ${err.message || 'validate failed'}` },
+        { status: 500 }
       );
     }
 
-    // Return user (without password)
+    // No DB yet: just return a user object keyed by email.
     return NextResponse.json<AuthResponse>({
       success: true,
       user: {
-        id: user.id,
-        email: user.email,
-        isEnrolled: user.isEnrolled,
+        id: email,
+        email,
+        isEnrolled: true,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Login error', error);
     return NextResponse.json<AuthResponse>(
       { success: false, error: 'Internal server error' },
       { status: 500 }

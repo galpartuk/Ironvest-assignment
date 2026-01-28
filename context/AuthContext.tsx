@@ -10,8 +10,12 @@ interface AuthContextType {
   isLoading: boolean;
   login: (credentials: LoginCredentials) => Promise<AuthResponse>;
   register: (credentials: RegisterCredentials) => Promise<AuthResponse>;
+  /** Register with biometric (used after ActionID capture on registration flow). */
+  registerWithBiometric: (params: { email: string; csid?: string }) => Promise<AuthResponse>;
+  /** Login with biometric (ActionID validate). */
+  loginWithBiometric: (params: { email: string; csid: string }) => Promise<AuthResponse>;
   logout: () => void;
-  enroll: () => Promise<AuthResponse>;
+  enroll: (options?: { csid?: string }) => Promise<AuthResponse>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -70,7 +74,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: credentials.email,
-          password: credentials.password,
         }),
       });
 
@@ -90,12 +93,57 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const enroll = async (): Promise<AuthResponse> => {
+  const registerWithBiometric = async (params: {
+    email: string;
+    csid?: string;
+  }): Promise<AuthResponse> => {
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: params.email,
+          csid: params.csid,
+        }),
+      });
+      const data: AuthResponse = await response.json();
+      if (data.success && data.user) {
+        setUser(data.user);
+        setStoredUser(data.user);
+      }
+      return data;
+    } catch (error) {
+      return {
+        success: false,
+        error: 'Network error. Please try again.',
+      };
+    }
+  };
+
+  const loginWithBiometric = async (params: { email: string; csid: string }): Promise<AuthResponse> => {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: params.email, csid: params.csid }),
+      });
+      const data: AuthResponse = await response.json();
+      if (data.success && data.user) {
+        setUser(data.user);
+        setStoredUser(data.user);
+      }
+      return data;
+    } catch {
+      return { success: false, error: 'Network error. Please try again.' };
+    }
+  };
+
+  const enroll = async (options?: { csid?: string }): Promise<AuthResponse> => {
     try {
       const response = await fetch('/api/auth/enroll', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user?.id }),
+        body: JSON.stringify({ uid: user?.email, csid: options?.csid }),
       });
 
       const data: AuthResponse = await response.json();
@@ -127,6 +175,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         isLoading,
         login,
         register,
+        registerWithBiometric,
+        loginWithBiometric,
         logout,
         enroll,
       }}

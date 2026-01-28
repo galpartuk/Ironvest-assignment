@@ -12,13 +12,11 @@ export interface AuthState {
 
 export interface LoginCredentials {
   email: string;
-  password: string;
+  csid?: string;
 }
 
 export interface RegisterCredentials {
   email: string;
-  password: string;
-  confirmPassword: string;
 }
 
 export interface AuthResponse {

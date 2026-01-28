@@ -25,7 +25,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-4 py-8 page-transition">
+    <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4 py-8">
       <Card title="Welcome Back" subtitle="Login to your account">
         <LoginForm />
       </Card>

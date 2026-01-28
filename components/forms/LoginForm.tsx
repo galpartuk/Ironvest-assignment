@@ -7,12 +7,11 @@ import { z } from 'zod';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
-import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
+import { setPendingLogin } from '@/lib/auth';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
-  password: z.string().min(1, 'Password is required'),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -20,7 +19,6 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export const LoginForm: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
   const router = useRouter();
 
   const {
@@ -34,24 +32,10 @@ export const LoginForm: React.FC = () => {
   const onSubmit = async (data: LoginFormData) => {
     setError('');
     setIsLoading(true);
-
-    try {
-      const response = await login(data);
-
-      if (response.success) {
-        if (response.user?.isEnrolled) {
-          router.push('/home');
-        } else {
-          router.push('/enroll');
-        }
-      } else {
-        setError(response.error || 'Login failed. Please try again.');
-      }
-    } catch (err) {
-      setError('An unexpected error occurred.');
-    } finally {
-      setIsLoading(false);
-    }
+    // Per ActionID flow, login must go through biometric capture on /enroll
+    setPendingLogin({ email: data.email });
+    router.push('/enroll?flow=login');
+    setIsLoading(false);
   };
 
   return (
@@ -67,22 +51,13 @@ export const LoginForm: React.FC = () => {
         autoComplete="email"
       />
 
-      <Input
-        label="Password"
-        type="password"
-        {...register('password')}
-        error={errors.password?.message}
-        placeholder="Enter your password"
-        autoComplete="current-password"
-      />
-
-      <Button type="submit" variant="primary" isLoading={isLoading} className="w-full" size="lg">
+      <Button type="submit" variant="primary" isLoading={isLoading} className="w-full">
         Login
       </Button>
 
       <p className="text-center text-sm text-slate-600">
         Don't have an account?{' '}
-        <a href="/register" className="text-blue-600 hover:text-blue-700 font-semibold hover:underline transition-colors">
+        <a href="/register" className="text-blue-600 hover:text-blue-700 font-semibold hover:underline">
           Register
         </a>
       </p>
